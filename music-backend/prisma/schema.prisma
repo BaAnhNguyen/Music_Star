@@ -1,0 +1,83 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User{
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String   
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Mối quan hệ với các bài hát yêu thích
+  favorites Favorite[]
+}
+
+model Song {
+  id          Int       @id @default(autoincrement())
+  title       String    
+  description String?   
+  bpm         Int?      //bit per minutes, đây nhịp trên phút
+  key         String?   
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  artistId    Int?
+  artist      Artist?   @relation(fields: [artistId], references: [id])
+  
+  sheetMusic  SheetMusic?
+  chordSheet  ChordSheet?
+
+
+  favoritedBy Favorite[]
+}
+
+model Favorite {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  songId    Int
+  createdAt DateTime @default(now()) // Thời điểm user bấm thích bài hát này
+
+  // Thiết lập khóa ngoại 
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  song      Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  // Đảm bảo một User không thể "yêu thích" trùng một bài hát nhiều lần
+  @@unique([userId, songId])
+}
+
+model Artist {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  songs Song[]
+}
+
+model SheetMusic {
+  id         Int      @id @default(autoincrement())
+  songId     Int      @unique
+  song       Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  notationData Json     
+  rawFileUrl  String?  
+  updatedAt  DateTime @updatedAt
+}
+
+model ChordSheet {
+  id              Int      @id @default(autoincrement())
+  songId          Int      @unique
+  song            Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  chordProContent String   @db.Text 
+  chordsUsed      String[] 
+  updatedAt       DateTime @updatedAt
+}
